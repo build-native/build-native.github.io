@@ -305,6 +305,32 @@ figcaption{
   font-size:12.5px;
 }
 
+.tabs{gap:8px}
+.tab{
+  appearance:none;
+  border:1px solid transparent;
+  background:none;
+  color:var(--dim);
+  font:12px/1 ui-monospace,SFMono-Regular,"JetBrains Mono",Menlo,monospace;
+  padding:5px 10px;
+  border-radius:6px;
+  cursor:pointer;
+  transition:color .18s var(--ease),background .18s var(--ease),border-color .18s var(--ease);
+}
+.tab:hover{color:var(--text)}
+.tab:focus-visible{outline:2px solid var(--native);outline-offset:2px}
+.tab.is-active{
+  color:var(--alloy);
+  background:rgba(126,160,190,.1);
+  border-color:var(--line);
+}
+
+/* Both panes share one grid cell, so the box is as tall as the taller of
+   the two and switching tabs never shifts the page. */
+.tabpanes{display:grid}
+.tabpanes > .tabpane{grid-area:1 / 1;visibility:hidden;opacity:0;transition:opacity .16s var(--ease)}
+.tabpanes > .tabpane.is-active{visibility:visible;opacity:1}
+
 .tag{
   font:11px/1 ui-monospace,SFMono-Regular,Menlo,monospace;
   letter-spacing:.08em;text-transform:uppercase;

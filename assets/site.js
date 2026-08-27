@@ -63,6 +63,25 @@
     el.innerHTML = highlight(el.textContent, el.dataset.lang);
   });
 
+  /* ------------------------------------------------------------ tabs */
+
+  document.querySelectorAll('.pane .tabs').forEach((bar) => {
+    const pane = bar.closest('.pane');
+    const buttons = [...bar.querySelectorAll('.tab')];
+    buttons.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        buttons.forEach((b) => {
+          const on = b === btn;
+          b.classList.toggle('is-active', on);
+          b.setAttribute('aria-selected', String(on));
+        });
+        pane.querySelectorAll('.tabpane').forEach((p) => {
+          p.classList.toggle('is-active', p.dataset.pane === btn.dataset.tab);
+        });
+      });
+    });
+  });
+
   /* --------------------------------------------------------- reveals */
 
   const targets = document.querySelectorAll(

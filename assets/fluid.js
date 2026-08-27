@@ -433,12 +433,12 @@
 
   function agitate () {
     if (Math.abs(scrollVel) > 0.4) {
-      const v = Math.max(-70, Math.min(70, -scrollVel * 1.6));
+      const v = Math.max(-35, Math.min(35, -scrollVel * 0.8));
       for (let i = 0; i < 4; i++) {
         const y = 0.12 + 0.25 * i;
         const s = 0.10 + 0.02 * i;
-        splat(s,       y, 34, v, [JAVA[0] * 0.12,   JAVA[1] * 0.12,   JAVA[2] * 0.12]);
-        splat(1 - s,   y, -34, v, [NATIVE[0] * 0.08, NATIVE[1] * 0.08, NATIVE[2] * 0.08]);
+        splat(s,       y, 17, v, [JAVA[0] * 0.12,   JAVA[1] * 0.12,   JAVA[2] * 0.12]);
+        splat(1 - s,   y, -17, v, [NATIVE[0] * 0.08, NATIVE[1] * 0.08, NATIVE[2] * 0.08]);
       }
       scrollVel *= 0.72;
       if (Math.abs(scrollVel) < 0.4) scrollVel = 0;
