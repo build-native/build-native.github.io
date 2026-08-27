@@ -246,22 +246,14 @@ Java_com_example_Fast_isPrime(JNIEnv *env,
     Sample velocity(int i, float v);
 }
 
-// Allocate one, or map the layout onto bytes
-// you already have — a slice of a ByteBuffer,
-// a mapped file, a shared arena:
-
-Sample s = Struct.of(Sample.class).allocateDirect();
 Sample view = Struct.of(Sample.class).map(buffer);
-
 view.id(7).name("probe").velocity(0, 9.81f);
 
 // Hand it straight to native code — no marshalling:
 new Probe().stamp(buffer, 0.016f);
 
-// prints:
 // Sample{ 8, "probe", { 9.81, -0.15696001, 0.0 } }
-s.set(view);
-println(s);</code></pre>
+println(view);</code></pre>
         </figure>
         <div class="fuse" aria-hidden="true"></div>
         <figure class="pane" data-obstacle data-side="native">
