@@ -264,18 +264,21 @@ h1 em{
 .split{
   display:grid;
   grid-template-columns:1fr auto 1fr;
-  align-items:stretch;
+  align-items:start;      /* panes size to their content, no dead space */
   gap:0;
   margin-top:26px;
 }
 
 .fuse{
+  align-self:stretch;
   width:clamp(18px,3vw,44px);
   background:
     linear-gradient(180deg,transparent,rgba(255,157,92,.16) 30%,rgba(78,224,200,.16) 70%,transparent);
   mask-image:linear-gradient(180deg,transparent,#000 22%,#000 78%,transparent);
   -webkit-mask-image:linear-gradient(180deg,transparent,#000 22%,#000 78%,transparent);
 }
+
+.stack{display:flex;flex-direction:column;gap:14px;min-width:0}
 
 .single{margin-top:26px}
 

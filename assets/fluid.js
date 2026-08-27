@@ -422,7 +422,7 @@
       const phase = t * 0.00011 + i * 2.1;
       const yJ = 0.22 + 0.28 * i + 0.1 * Math.sin(phase);
       const yN = 0.18 + 0.3  * i + 0.1 * Math.cos(phase * 1.3);
-      const push = (21 + 9 * Math.sin(phase * 0.7)) * drift;
+      const push = (5.2 + 2.2 * Math.sin(phase * 0.7)) * drift;
 
       splat(0.015, yJ,  push, 2.5 * Math.sin(phase * 1.7),
         [JAVA[0] * 0.17, JAVA[1] * 0.17, JAVA[2] * 0.17]);
