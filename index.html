@@ -1,0 +1,413 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Alloy — two materials, one build · native.build</title>
+<meta name="description" content="Alloy is a Gradle toolchain that fuses Java and C/C++ into a single reproducible build: generated JNI bridges, Java-to-C transpilation, zero-copy structs, cross-compilation and per-platform packaging.">
+<meta name="theme-color" content="#06090e">
+<meta property="og:title" content="Alloy — two materials, one build">
+<meta property="og:description" content="A Gradle toolchain that fuses Java and C/C++ into a single reproducible build.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://native.build/">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='12' cy='16' r='9' fill='%23ff9d5c' opacity='.85'/%3E%3Ccircle cx='20' cy='16' r='9' fill='%234ee0c8' opacity='.85'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<canvas id="fluid" aria-hidden="true"></canvas>
+<div class="veil" aria-hidden="true"></div>
+
+<header class="nav">
+  <a class="brand" href="#top" aria-label="native.build home">
+    <span class="mark" aria-hidden="true"></span>
+    <span class="brand-text">native<span class="dot">.</span>build</span>
+  </a>
+  <nav class="nav-links">
+    <a href="#overview">Overview</a>
+    <a href="#bridges">Bridges</a>
+    <a href="#build">Build</a>
+    <a href="#scope">Scope</a>
+    <a class="nav-gh" href="https://github.com/build-native">GitHub<span aria-hidden="true"> ↗</span></a>
+  </nav>
+</header>
+
+<main id="top">
+
+  <section class="hero">
+    <p class="eyebrow"><span class="pulse" aria-hidden="true"></span> Alloy · a Gradle toolchain</p>
+    <h1>Two materials.<br><em>One build.</em></h1>
+    <p class="lede">Java on one side. C and C++ on the other. Alloy fuses them into a single
+      reproducible Gradle build — generating the JNI bridges, compiling the natives for every
+      target, and packaging the binaries into your jars.</p>
+    <div class="hero-actions">
+      <a class="btn btn-primary" href="#overview">See how it works</a>
+      <a class="btn" href="https://github.com/build-native">github.com/build-native<span aria-hidden="true"> ↗</span></a>
+    </div>
+    <p class="prerelease">Pre-release · in active development · not yet published to Maven Central</p>
+    <div class="scroll-cue" aria-hidden="true"><span></span></div>
+  </section>
+
+  <section class="section" id="overview">
+    <p class="kicker">The overview</p>
+    <h2>The boundary is the hard part. Alloy owns the boundary.</h2>
+    <p class="prose">Everything painful about mixing Java and native code lives at the seam: writing
+      JNI by hand, keeping signatures in sync, cross-compiling for each platform, shipping the right
+      binary to the right machine, and loading it at runtime without surprises. Alloy takes that seam
+      as its job — you write the two halves, it makes them one artifact.</p>
+
+    <div class="stats">
+      <div class="stat">
+        <span class="stat-key">./gradlew build</span>
+        <p>Compiles your C/C++ next to your Java, links per target and build type, and packages
+          each platform's binary into a classified jar.</p>
+      </div>
+      <div class="stat">
+        <span class="stat-key">no hand-written JNI</span>
+        <p>Bridges are generated from annotations — including a C++ wrapper layer where Java
+          objects, fields and methods are typed C++ values.</p>
+      </div>
+      <div class="stat">
+        <span class="stat-key">runs everywhere you ship</span>
+        <p>macOS, Linux and Android NDK targets from one build, with Conan dependencies and
+          IDE integration resolved per platform.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="bridges">
+    <p class="kicker">The bridges</p>
+    <h2>Five ways across, one build file.</h2>
+    <p class="prose">Each of these is a different answer to the same question — how should this
+      particular piece of code cross the boundary? Pick per method, not per project.</p>
+
+    <article class="case">
+      <header class="case-head">
+        <h3><span class="num">01</span> Write C++ that speaks Java</h3>
+        <p>Annotate a class and Alloy generates a typed C++ header for it. Java fields become
+          assignable C++ members; Java methods become callable C++ methods; exceptions propagate
+          both ways.</p>
+      </header>
+      <div class="split">
+        <figure class="pane" data-obstacle data-side="java">
+          <figcaption><span class="tag tag-java">Java</span><span class="file">Hello.java</span></figcaption>
+          <pre><code data-lang="java">import build.native.annotations.NativeClass;
+import build.native.annotations.NativeMethod;
+import build.native.annotations.NativeField;
+import build.native.runtime.Alloy;
+
+@NativeClass
+public class Hello {
+    static final NativeLibrary LIB =
+        Alloy.loadLibrary(Hello.class);
+
+    /** Visible to C++ as JavaField&lt;jint&gt;. */
+    @NativeField
+    int greetCount = 0;
+
+    /** Implemented in Hello.cpp. */
+    @NativeMethod
+    public native String greet(String name, int n);
+
+    /** Callable from C++ as a JavaMethod. */
+    @NativeMethod
+    public String repeat(String text, int times) {
+        return text.repeat(times);
+    }
+}</code></pre>
+        </figure>
+        <div class="fuse" aria-hidden="true"></div>
+        <figure class="pane" data-obstacle data-side="native">
+          <figcaption><span class="tag tag-native">C++</span><span class="file">Hello.cpp</span></figcaption>
+          <pre><code data-lang="cpp">#include "com/example/Hello.hpp"
+
+using namespace alloy;
+using namespace java::lang;
+
+Local&lt;String&gt; com::example::Hello::greet(
+        const Reference&lt;String&gt;&amp; name, jint n) {
+
+    // Call back into Java — no receiver needed.
+    auto repeated = this-&gt;repeat(name, n);
+
+    auto sb = StringBuilder::create();
+    sb-&gt;append("Hello [");
+    sb-&gt;appendString(repeated);
+    sb-&gt;append("] from C++!");
+
+    greetCount++;      // a Java field, from C++
+
+    return sb-&gt;toString();
+}</code></pre>
+        </figure>
+      </div>
+    </article>
+
+    <article class="case">
+      <header class="case-head">
+        <h3><span class="num">02</span> Or write no native code at all</h3>
+        <p>Mark a <code>native</code> override with <code>@TranspileNative</code> and Alloy
+          transpiles the superclass's Java implementation into C, binds it to the override, and
+          keeps the original method intact and callable.</p>
+      </header>
+      <div class="split">
+        <figure class="pane" data-obstacle data-side="java">
+          <figcaption><span class="tag tag-java">Java</span><span class="file">Computations.java</span></figcaption>
+          <pre><code data-lang="java">public class Computations {
+
+    public boolean isPrime(long n) {
+        if (n &lt; 2) return false;
+        for (long d = 2; d * d &lt;= n; d++)
+            if (n % d == 0) return false;
+        return true;
+    }
+}
+
+public class Fast extends Computations {
+
+    @Override
+    @TranspileNative
+    public native boolean isPrime(long n);
+}</code></pre>
+        </figure>
+        <div class="fuse" aria-hidden="true"></div>
+        <figure class="pane" data-obstacle data-side="native">
+          <figcaption><span class="tag tag-native">generated C</span><span class="file">Fast.c</span></figcaption>
+          <pre><code data-lang="c">JNIEXPORT jboolean JNICALL
+Java_com_example_Fast_isPrime(JNIEnv *env,
+                              jobject self, jlong n) {
+
+    if (n &lt; 2) return JNI_FALSE;
+
+    for (jlong d = 2; alloy_lmul(d, d) &lt;= n; d++)
+        if (alloy_lrem(n, d) == 0) return JNI_FALSE;
+
+    return JNI_TRUE;
+}
+
+/* Java semantics kept exactly: wrap-on-overflow
+   arithmetic, MIN/-1 division guards, NaN-correct
+   comparisons. Not "C that looks similar". */</code></pre>
+        </figure>
+      </div>
+    </article>
+
+    <article class="case">
+      <header class="case-head">
+        <h3><span class="num">03</span> Structs, without the copy</h3>
+        <p>Declare a C layout as a Java interface. Alloy generates the accessors over a direct
+          buffer, so native code receives a real pointer to the same bytes — no marshalling, no
+          copies, mutations visible on both sides.</p>
+      </header>
+      <div class="split">
+        <figure class="pane" data-obstacle data-side="java">
+          <figcaption><span class="tag tag-java">Java</span><span class="file">Sample.java</span></figcaption>
+          <pre><code data-lang="java">public interface Sample extends Struct&lt;Sample&gt; {
+
+    @Field int id();
+    Sample id(int v);
+
+    @CString(12) String name();
+    Sample name(String s);
+
+    @Field @Array(3) float velocity(int i);
+    Sample velocity(int i, float v);
+
+    @Field Value value();      // an embedded union
+}</code></pre>
+        </figure>
+        <div class="fuse" aria-hidden="true"></div>
+        <figure class="pane" data-obstacle data-side="native">
+          <figcaption><span class="tag tag-native">C</span><span class="file">layout</span></figcaption>
+          <pre><code data-lang="c">struct Sample {
+    int32_t     id;           /* @0  */
+    char        name[12];     /* @4  */
+    float       velocity[3];  /* @16 */
+    union Value value;        /* @28 */
+};                            /* size 32, align 4 */
+
+/* Alloy computes the layout, honours
+   @Field(align = 64) for cache-line padding, and
+   hands native a Sample* straight out of the
+   direct buffer. */</code></pre>
+        </figure>
+      </div>
+    </article>
+
+    <article class="case">
+      <header class="case-head">
+        <h3><span class="num">04</span> SIMD, from ordinary Java source</h3>
+        <p>Add <code>vectorize = true</code> and the transpiler emits vector-extension C for
+          recognised reduction and elementwise patterns. <code>@Critical</code> pins the arrays
+          so no copy happens on the way in.</p>
+      </header>
+      <div class="split">
+        <figure class="pane" data-obstacle data-side="java">
+          <figcaption><span class="tag tag-java">Java</span><span class="file">VectorKernels.java</span></figcaption>
+          <pre><code data-lang="java">@TranspileNative(vectorize = true)
+public static double dotProduct(@Critical double[] a,
+                                @Critical double[] b,
+                                int len) {
+    double sum = 0.0;
+    for (int i = 0; i &lt; len; i++)
+        sum += a[i] * b[i];
+    return sum;
+}</code></pre>
+        </figure>
+        <div class="fuse" aria-hidden="true"></div>
+        <figure class="pane" data-obstacle data-side="native">
+          <figcaption><span class="tag tag-native">generated C</span><span class="file">VectorKernels.c</span></figcaption>
+          <pre><code data-lang="c">typedef double v4d __attribute__((vector_size(32)));
+
+v4d acc = {0.0, 0.0, 0.0, 0.0};
+jint i = 0;
+
+for (; i + 4 &lt;= len; i += 4)
+    acc += *(v4d *)(a + i) * *(v4d *)(b + i);
+
+jdouble sum = acc[0] + acc[1] + acc[2] + acc[3];
+
+for (; i &lt; len; i++)          /* scalar tail */
+    sum += a[i] * b[i];</code></pre>
+        </figure>
+      </div>
+    </article>
+
+    <article class="case">
+      <header class="case-head">
+        <h3><span class="num">05</span> Native code that cannot take the JVM with it</h3>
+        <p>One annotation moves a method into a child process, connected by a Unix socket with a
+          shared memory arena. Structs cross as descriptors, not copies — and a segfault surfaces
+          as an exception instead of killing your JVM.</p>
+      </header>
+      <div class="split">
+        <figure class="pane" data-obstacle data-side="java">
+          <figcaption><span class="tag tag-java">Java</span><span class="file">Kernels.java</span></figcaption>
+          <pre><code data-lang="java">public class Kernels {
+
+    @NativeMethod
+    @IsolateNative("mathCompute")
+    public native void accumulate(Counters c);
+}
+
+// A crash in the child throws
+// IsolationCrashException. A 64 KB struct never
+// crosses the socket — only its
+// (segment, offset, size) descriptor does.</code></pre>
+        </figure>
+        <div class="fuse" aria-hidden="true"></div>
+        <figure class="pane" data-obstacle data-side="native">
+          <figcaption><span class="tag tag-native">runtime</span><span class="file">isolation</span></figcaption>
+          <pre><code data-lang="c">  JVM  ──unix socket──▶  alloy-isolation-driver
+   │                            │
+   └────── shared arena ────────┘
+           (mmap, zero-copy)
+
+/* The generated bridge runs unmodified in the
+   child. The parent keeps running, whatever
+   happens over there. */</code></pre>
+        </figure>
+      </div>
+    </article>
+  </section>
+
+  <section class="section" id="build">
+    <p class="kicker">The build</p>
+    <h2>One build file describes every platform you ship.</h2>
+    <p class="prose">Targets, build types, cross-compilation and native dependencies are ordinary
+      Gradle configuration. Each target produces its own archive, its own linked library and its own
+      classified jar — from a single <code>./gradlew build</code>.</p>
+    <div class="single">
+      <figure class="pane pane-wide" data-obstacle data-side="fuse">
+        <figcaption><span class="tag tag-fuse">Gradle</span><span class="file">build.gradle.kts</span></figcaption>
+        <pre><code data-lang="kotlin">plugins {
+    java
+    id("build.native.cpp")
+    id("build.native.jni")
+}
+
+alloy {
+    cpp { standard.set(CppStandard.CPP20) }
+
+    buildTypes {
+        debug { }
+        release {
+            cpp { flags += "-O2" }
+            linker { flags += "-s" }
+        }
+    }
+
+    targets {
+        create("host") {
+            buildType("release")
+            packaging { jar { classifier(host) } }
+        }
+        create("android") {
+            conan { profile("android-arm64") }
+            packaging { jar { classifier(name) } }
+        }
+    }
+
+    conan {
+        conanfile {
+            requires("eigen/3.4.0")
+            requires("zlib/1.3.1")
+        }
+    }
+
+    ide {
+        clangd { compileCommands(true) }  // real C++ completion
+        make   { makefile(true) }         // a real orchestrator
+    }
+}</code></pre>
+      </figure>
+    </div>
+  </section>
+
+  <section class="section" id="scope">
+    <p class="kicker">The scope</p>
+    <h2>What else is in the alloy.</h2>
+    <div class="grid">
+      <div class="cell"><h4>Generated JNI</h4><p>Bridges from annotations, with correct name mangling, exception checks and null handling.</p></div>
+      <div class="cell"><h4>C++ object framework</h4><p>Java references, arrays, strings and fields as typed C++ values with scoped lifetimes.</p></div>
+      <div class="cell"><h4>Java → C transpiler</h4><p>Bytecode to C with Java semantics preserved, including a build-failing check when emission can't be trusted.</p></div>
+      <div class="cell"><h4>Vectorization</h4><p>SIMD C for recognised loop patterns, with alignment honoured only where it is actually guaranteed.</p></div>
+      <div class="cell"><h4>Zero-copy structs</h4><p>C layouts as Java interfaces — arrays, strings, unions, explicit alignment, shared arenas.</p></div>
+      <div class="cell"><h4>Process isolation</h4><p>Per-group child processes over Unix sockets; crashes become exceptions, not core dumps.</p></div>
+      <div class="cell"><h4>Cross-compilation</h4><p>macOS, Linux and Android NDK targets, each with its own toolchain, flags and packaging.</p></div>
+      <div class="cell"><h4>Conan dependencies</h4><p>Native libraries resolved per target, with pkg-config flags folded into compile and link.</p></div>
+      <div class="cell"><h4>Make &amp; Ninja</h4><p>Generated build files that are both IDE artifacts and real orchestrators for the native step.</p></div>
+      <div class="cell"><h4>Native tests</h4><p>Test executables built and run per build type, alongside your JVM tests.</p></div>
+      <div class="cell"><h4>Runtime loading</h4><p>Per-platform binaries extracted from the jar into owner-only temp storage and loaded on demand.</p></div>
+      <div class="cell"><h4>IDE integration</h4><p><code>compile_commands.json</code> for clangd, so the C++ half is as navigable as the Java half.</p></div>
+    </div>
+  </section>
+
+  <section class="section closing">
+    <h2>Still being forged.</h2>
+    <p class="prose">Alloy is in active development ahead of its first public release. The build,
+      the bridges and the demos all run today; the coordinates below are what they will be
+      published as.</p>
+    <div class="coords">
+      <div class="coord"><span class="coord-label">runtime</span><code>build.native:struct</code></div>
+      <div class="coord"><span class="coord-label">plugin</span><code>build.native.cpp</code></div>
+    </div>
+    <div class="hero-actions">
+      <a class="btn btn-primary" href="https://github.com/build-native">Follow it on GitHub<span aria-hidden="true"> ↗</span></a>
+    </div>
+  </section>
+
+</main>
+
+<footer class="foot">
+  <div class="foot-inner">
+    <span class="brand-text small">native<span class="dot">.</span>build</span>
+    <span class="foot-links">
+      <a href="https://github.com/build-native">github.com/build-native</a>
+    </span>
+  </div>
+</footer>
+
+<script src="assets/fluid.js" defer></script>
+<script src="assets/site.js" defer></script>
+</body>
+</html>
