@@ -157,15 +157,14 @@ using namespace java::lang;
 
 class Hello : public Object {
 public:
-    static constexpr char className[]
-        = "com/example/Hello";
 
-    JavaField&lt;jint&gt; greetCount{"greetCount"};
+static constexpr char className[] = "com/example/Hello";
 
-    JavaMethod&lt;String(String, jint)&gt; repeat{"repeat"};
+JavaField&lt;jint&gt; greetCount{"greetCount"};
 
-    Local&lt;String&gt; greet(const Reference&lt;String&gt;&amp; name,
-                        jint n);
+JavaMethod&lt;String(String, jint)&gt; repeat{"repeat"};
+
+Local&lt;String&gt; greet(const Reference&lt;String&gt;&amp; name, jint n);
 };
 
 }</code></pre>
