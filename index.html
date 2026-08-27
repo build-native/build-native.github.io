@@ -244,8 +244,6 @@ Java_com_example_Fast_isPrime(JNIEnv *env,
 
     @Field @Array(3) float velocity(int i);
     Sample velocity(int i, float v);
-
-    @Field Value value();      // an embedded union
 }
 
 // Allocate one, or map the layout onto bytes
@@ -255,20 +253,24 @@ Java_com_example_Fast_isPrime(JNIEnv *env,
 Sample s = Struct.of(Sample.class).allocateDirect();
 Sample view = Struct.of(Sample.class).map(buffer);
 
-s.id(7).name("probe").velocity(0, 9.81f);
+view.id(7).name("probe").velocity(0, 9.81f);
 
 // Hand it straight to native code — no marshalling:
-new Probe().stamp(s, 0.016f);</code></pre>
+new Probe().stamp(buffer, 0.016f);
+
+// prints:
+// {"id":8,"name":"probe","velocity":[9.81,-0.15696,0.0]}
+s.set(view);
+println(s);</code></pre>
         </figure>
         <div class="fuse" aria-hidden="true"></div>
         <figure class="pane" data-obstacle data-side="native">
           <figcaption><span class="tag tag-native">C++</span><span class="file">Sample.h · Probe.cpp</span></figcaption>
           <pre><code data-lang="cpp">struct Sample {
-    int32_t     id;           /* @0  */
-    char        name[12];     /* @4  */
-    float       velocity[3];  /* @16 */
-    union Value value;        /* @28 */
-};                            /* size 32, align 4 */
+    int32_t id;               /* @0  */
+    char    name[12];         /* @4  */
+    float   velocity[3];      /* @16 */
+};                            /* size 28, align 4 */
 
 /* Java hands over a direct ByteBuffer. The bridge
    resolves it with GetDirectBufferAddress, so your
