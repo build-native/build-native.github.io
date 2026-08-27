@@ -36,10 +36,10 @@
     DYE_RES:        352,   // dye grid, long side
     CANVAS_DIV:     3,     // backing store = viewport / this
     PRESSURE_ITERS: 18,
-    VELOCITY_DISS:  0.18,
-    DYE_DISS:       0.48,
+    VELOCITY_DISS:  0.15,
+    DYE_DISS:       0.30,
     PRESSURE_DISS:  0.8,
-    CURL:           reduced ? 6 : 13,
+    CURL:           reduced ? 5 : 9,
     SPLAT_RADIUS:   0.0055
   };
 
@@ -419,14 +419,14 @@
   function emit (t) {
     const drift = reduced ? 0.35 : 1;
     for (let i = 0; i < 3; i++) {
-      const phase = t * 0.00022 + i * 2.1;
+      const phase = t * 0.00011 + i * 2.1;
       const yJ = 0.22 + 0.28 * i + 0.1 * Math.sin(phase);
       const yN = 0.18 + 0.3  * i + 0.1 * Math.cos(phase * 1.3);
-      const push = (42 + 18 * Math.sin(phase * 0.7)) * drift;
+      const push = (21 + 9 * Math.sin(phase * 0.7)) * drift;
 
-      splat(0.015, yJ,  push, 5 * Math.sin(phase * 1.7),
+      splat(0.015, yJ,  push, 2.5 * Math.sin(phase * 1.7),
         [JAVA[0] * 0.17, JAVA[1] * 0.17, JAVA[2] * 0.17]);
-      splat(0.985, yN, -push, 5 * Math.cos(phase * 1.4),
+      splat(0.985, yN, -push, 2.5 * Math.cos(phase * 1.4),
         [NATIVE[0] * 0.105, NATIVE[1] * 0.105, NATIVE[2] * 0.105]);
     }
   }
@@ -570,6 +570,6 @@
   }
 
   // Prime the field so the hero is already alive on first paint.
-  for (let i = 0; i < 26; i++) { emit(i * 120); if (i % 2 === 0) step(0.016); }
+  for (let i = 0; i < 34; i++) { emit(i * 240); if (i % 2 === 0) step(0.016); }
   requestAnimationFrame(frame);
 })();
