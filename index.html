@@ -90,10 +90,10 @@
       <div class="split split-stacked">
         <figure class="pane" data-obstacle data-side="java">
           <figcaption><span class="tag tag-java">Java</span><span class="file">Hello.java</span></figcaption>
-          <pre><code data-lang="java">import build.native.annotations.NativeClass;
-import build.native.annotations.NativeMethod;
-import build.native.annotations.NativeField;
-import build.native.runtime.Alloy;
+          <pre><code data-lang="java">import alloy.annotations.NativeClass;
+import alloy.annotations.NativeMethod;
+import alloy.annotations.NativeField;
+import alloy.runtime.Alloy;
 
 @NativeClass
 public class Hello {
@@ -158,13 +158,14 @@ using namespace java::lang;
 class Hello : public Object {
 public:
 
-static constexpr char className[] = "com/example/Hello";
+    static constexpr char className[] = "com/example/Hello";
 
-JavaField&lt;jint&gt; greetCount{"greetCount"};
+    JavaField&lt;jint&gt; greetCount{"greetCount"};
 
-JavaMethod&lt;String(String, jint)&gt; repeat{"repeat"};
+    JavaMethod&lt;String(String, jint)&gt; repeat{"repeat"};
 
-Local&lt;String&gt; greet(const Reference&lt;String&gt;&amp; name, jint n);
+    Local&lt;String&gt;
+        greet(const Reference&lt;String&gt;&amp; name, jint n);
 };
 
 }</code></pre>
